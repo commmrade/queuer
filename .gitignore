@@ -1,0 +1,5 @@
+*
+!.gitignore
+!queuer_main.c
+!Makefile
+!resolver.h
