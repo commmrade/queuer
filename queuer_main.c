@@ -50,6 +50,8 @@ static ssize_t proc_read(struct file* file, char __user* buffer, size_t buffer_s
 }
 
 static int __init queuer_init(void) {
+    int failed_at = -1;
+
     if (resolve_symbols() < 0) {
         pr_err("Could not resolve kallsyms_lookup_name\n");
         return -ENODATA;
@@ -71,10 +73,9 @@ static int __init queuer_init(void) {
     proc_dir = proc_mkdir(PROC_DIR_NAME, NULL);
     if (!proc_dir) {
         pr_err("Could not create a /proc directory '%s'\n", PROC_DIR_NAME);
-        return -ENOMEM;
+        goto cleanup;
     }
 
-    int failed_at = -1;
     for (int i = 0; i < cpus_online; ++i) {
         char buf[1 << 4];
         snprintf(buf, sizeof(buf), "%d", i);
@@ -91,9 +92,12 @@ static int __init queuer_init(void) {
 
     return 0;
 cleanup:
-    for (int i = 0; i <= failed_at; ++i) {
+    for (int i = 0; i < failed_at; ++i) {
         proc_remove(proc_entries[i]);
     }
+
+    kfree(proc_entries);
+
     proc_remove(proc_dir);
 
     return -ENOMEM;
@@ -103,6 +107,9 @@ static void __exit queuer_exit(void) {
     for (int i = 0; i < cpus_online; ++i) {
         proc_remove(proc_entries[i]);
     }
+
+    kfree(proc_entries);
+
     proc_remove(proc_dir);
 }
 
